@@ -1,6 +1,7 @@
 const db = require("../../IndexFiles/modelsIndex");
 const tbl_album = db.album;
-
+const {saveFileAndGetNameByBase64} = require('../services/upload-files/service')
+const { Sequelize } = require('sequelize'); // Ensure Sequelize is imported
 //=========== create Album ================//
 
 exports.createAlbum = async (req , res) => {
@@ -21,7 +22,8 @@ exports.getAllAlbum = async (req , res) => {
         const findAlbum = await tbl_album.findAll({ 
             where: {
                 isDeleted: false
-            }
+            },
+            order: Sequelize.fn('RAND')
         })
         return res.status(200).send({code: 200, message: "All Album fetched succesfully" , data: findAlbum});
 

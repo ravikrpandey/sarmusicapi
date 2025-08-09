@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const {processFile} = require('../upload-files/index')
-
+const baseDirectory = path.join(__dirname, 'uploaded-local-files');
 const getFileUri = async (req, res) => {
     const fileName = req.params.fileName;
     if (!fileName || fileName === 'undefined') {
@@ -42,9 +42,9 @@ const saveFileAndGetName = async (req, res, next) => {
         return res.json({ success: false, message: error?.message || "Something went wrong, Try again later!" })
     }
 }
-const saveFileAndGetNameByBase64 = async (file, songTitle) => {
+const saveFileAndGetNameByBase64 = async (file, songTitle, res) => {
     try {
-        return await processFile(file, songTitle);
+        return await processFile(file, songTitle, res);
     } catch (error) {
         return res.json({ success: false, message: error?.message || "Something went wrong, Try again later!" })
     }

@@ -6,5 +6,6 @@ module.exports = app => {
     app.get("/api/getPlaylistById/:playlistId", playListController.getPlaylistById);
     app.put("/api/updatePlylist/:playlistId", playListController.updatePlylist);
     app.delete("/api/deletePlaylist/:playlistId", playListController.deletePlaylist);
+    app.get("/api/getAllDashBoardCount", playListController.getAllDashBoardCount);
 
 }

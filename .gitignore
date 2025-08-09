@@ -1,12 +1,13 @@
 # Node.js specific
 node_modules/
-npm-debug.log
-yarn-error.log
-config/
-config/db.config.js
+# npm-debug.log
+# yarn-error.log
+# config/
+# config/db.config.js
+.env
 
 # Dependency directories
-/node_modules
+# /node_modules
 
 # Optional npm cache directory
 .npm

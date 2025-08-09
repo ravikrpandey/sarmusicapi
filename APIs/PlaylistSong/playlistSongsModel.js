@@ -14,6 +14,13 @@ module.exports = (sequelize, Sequelize) => {
         songId: {
             type: Sequelize.INTEGER
         },
+        like:{
+            type: Sequelize.ENUM("unLiked", "Liked"),
+            defaultValue: "unLiked"
+        },
+        playedCount: {
+            type: Sequelize.INTEGER
+          },
         isDeleted: {
             type: Sequelize.BOOLEAN,
             defaultValue: false

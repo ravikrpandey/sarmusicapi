@@ -21,6 +21,9 @@ module.exports = (sequelize, Sequelize) => {
     type: {
       type: Sequelize.STRING
     },
+    email: {
+      type: Sequelize.STRING
+    },
     isDeleted: {
       type: Sequelize.BOOLEAN,
       defaultValue: false

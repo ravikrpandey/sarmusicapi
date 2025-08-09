@@ -44,20 +44,24 @@ const Role = db.role;
 
 //========== DB Sync ==========//
 
-db.sequelize
-  .sync()
-  .then(() => {
-    console.log("Synced db success...");
-  })
-  .catch((err) => {
-    console.log("Failed to sync db...", err.message);
-  });
+// db.sequelize
+//   .sync()
+//   .then(() => {
+//     console.log("Synced db success...");
+//   })
+//   .catch((err) => {
+//     console.log("Failed to sync db...", err.message);
+//   });
 
 //============ Express ===========//
 
 app.get("/", (req, res) => {
   res.json({ message: "Welcome to the SARMUSIC Back-End!" });
 });
+
+// Serve static files from the uploaded-local-files directory
+app.use('/uploaded-local-files', express.static(path.join(__dirname, '/APIs/services/upload-files/uploaded-local-files')));
+
 
 //===================== Serve static files ========================//
 
