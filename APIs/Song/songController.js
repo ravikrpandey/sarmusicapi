@@ -5,10 +5,12 @@ const tbl_album = db.album
 const youtubedl = require('youtube-dl-exec');
 // const ytdl = require('ytdl-core');
 const https = require('https');
+const path = require('path');
 const { exec } = require('child_process');
 const { where } = require("sequelize");
 const {saveFileAndGetNameByBase64} = require('../services/upload-files/service')
 const { Sequelize } = require('sequelize'); // Ensure Sequelize is imported
+const cookiesPath = path.resolve(__dirname, 'cookies.txt');
 //=============== create song  ======//
 
 // exports.createSong = async (req, res) => {
@@ -552,6 +554,7 @@ exports.ytdlUrl = async (req, res) => {
                 noWarnings: true,
                 noCallHome: true,
                 preferFreeFormats: true,
+                cookies: cookiesPath,
                 format: 'bestaudio'
             });
 
