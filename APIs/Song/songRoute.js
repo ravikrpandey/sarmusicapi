@@ -10,4 +10,5 @@ app.patch("/api/updateSong/:id", songRoute.updateSong);
 app.delete("/api/deleteSong/:id", songRoute.deleteSong);
 app.get("/api/getSongUrlByYoutubeLink", songRoute.getSongUrlByYoutubeLink);
 app.get("/api/masterSearchForSongOrAlbum/:searchKey", songRoute.masterSearchForSongOrAlbum);
+app.get("/api/youtube-stream/:searchKey", songRoute.ytdlUrl);
 }

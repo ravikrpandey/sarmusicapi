@@ -4,7 +4,7 @@ node_modules/
 # yarn-error.log
 # config/
 # config/db.config.js
-# .env
+.env
 
 # Dependency directories
 # /node_modules

@@ -44,14 +44,14 @@ const Role = db.role;
 
 //========== DB Sync ==========//
 
-db.sequelize
-  .sync()
-  .then(() => {
-    console.log("Synced db success...");
-  })
-  .catch((err) => {
-    console.log("Failed to sync db...", err.message);
-  });
+// db.sequelize
+//   .sync()
+//   .then(() => {
+//     console.log("Synced db success...");
+//   })
+//   .catch((err) => {
+//     console.log("Failed to sync db...", err.message);
+//   });
 
 //============ Express ===========//
 

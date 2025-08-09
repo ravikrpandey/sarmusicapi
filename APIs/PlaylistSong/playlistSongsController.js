@@ -3,6 +3,7 @@ const db = require("../../IndexFiles/modelsIndex");
 const tbl_songPlayList = db.playlistSong;
 const tbl_playlist = db.playlist
 const { Op } = require('sequelize');
+const { default: youtubeDl } = require("youtube-dl-exec");
 
 
 //=========== create songplaylist =========//
@@ -205,72 +206,119 @@ exports.updateSongPlayedCount = async (req, res) => {
   }
   
   //==================== getUsersPlaylist ==================//
+  // Optimized version: batch fetch all playlistSongs and all songs in one go to reduce DB calls
+
   exports.getUsersPlaylist = async (req, res) => {
     try {
       let { userId, mobileNumber } = req.params;
 
+      // 1. Get userId from mobileNumber
       const userData = await db.user.findOne({
-        where: { mobileNumber: mobileNumber },
+        where: { mobileNumber },
         attributes: ['userId']
       });
-      
+
       if (!userData) {
         return res.status(404).send({ code: 404, message: "User not found." });
       }
-      
+
       userId = userData.userId;
-  
+
+      // 2. Get all playlists for the user
       const playlists = await db.playlist.findAll({
-        where: { userId: userId }
+        where: { userId }
       });
-      
+
       if (!playlists.length) {
         return res.status(404).send({ code: 404, message: "No playlists found." });
       }
 
-      const songData = [];
-  
+      // 3. Get all playlistIds
+      const playlistIds = playlists.map(p => p.playlistId);
+
+      // 4. Get all playlistSongs for these playlists, with filter
+      const allPlaylistSongs = await db.playlistSong.findAll({
+        where: {
+          playlistId: playlistIds,
+          [Op.or]: [
+            { playedCount: { [Op.gte]: 3 } },
+            { like: 'Liked' }
+          ]
+        },
+        order: [['playedCount', 'DESC']]
+      });
+
+      // 5. Remove duplicate songIds per playlistId
+      //    Build a map: { playlistId: [playlistSong, ...] }
+      const playlistSongMap = {};
       for (const playlist of playlists) {
-        const playlistSongs = await db.playlistSong.findAll({
-          where: {
-            playlistId: playlist.playlistId,
-            [Op.or]: [
-              { playedCount: { [Op.gte]: 3 } },
-              { like: 'Liked' }
-            ]
-          },
-          order: [['playedCount', 'DESC']]
-        });
-
-        const songsWithUrls = await Promise.all(
-          playlistSongs.map(async (playlistSong) => {
-            const song = await db.song.findOne({
-              where: { songId: playlistSong.songId },
-              attributes: ['songId', 'songUrl', 'songCardUrl', 'albumCardUrl', 'songTitle', 'artistName' ]
-            });
-
-            let songTitle = song?.songTitle?.length > 15 ? song?.songTitle?.substring(0, 24) : song?.songTitle;
-
-            
-            return song ? { ...playlistSong.dataValues, songUrl: song.songUrl, songCardUrl: song.songCardUrl, albumCardUrl: song.albumCardUrl, songTitle:songTitle, artistName:song.artistName } : null;
-          })
-        );
-
-        songData.push({
-          playlistId: playlist.playlistId,
-          playlistName: playlist.playlistName,
-          songs: songsWithUrls.filter(Boolean)
-        });
+        playlistSongMap[playlist.playlistId] = [];
+      }
+      // Use a Set per playlistId to track unique songIds
+      const playlistSongIdSet = {};
+      for (const playlist of playlists) {
+        playlistSongIdSet[playlist.playlistId] = new Set();
+      }
+      for (const ps of allPlaylistSongs) {
+        const pid = ps.playlistId;
+        if (!playlistSongIdSet[pid].has(ps.songId)) {
+          playlistSongIdSet[pid].add(ps.songId);
+          playlistSongMap[pid].push(ps);
+        }
       }
 
-      let mostPlayed = songData
-      .filter(item => item.playlistName === 'MostPlayed')
-    
-  
+      // 6. Collect all unique songIds needed
+      const allSongIds = Array.from(
+        new Set(
+          allPlaylistSongs.map(ps => ps.songId)
+        )
+      );
+
+      // 7. Batch fetch all songs
+      const allSongs = await db.song.findAll({
+        where: { songId: allSongIds, isDeleted: false },
+        attributes: ['songId', 'songUrl', 'songCardUrl', 'albumCardUrl', 'songTitle', 'artistName', 'youtubeId']
+      });
+
+      // Build a map for quick lookup
+      const songMap = {};
+      for (const song of allSongs) {
+        songMap[song.songId] = song;
+      }
+
+      // 8. Build songData for each playlist
+      const songData = playlists.map(playlist => {
+        const playlistSongs = playlistSongMap[playlist.playlistId] || [];
+        const songsWithUrls = playlistSongs.map(playlistSong => {
+          const song = songMap[playlistSong.songId];
+          if (!song) return null;
+          let songTitle = song.songTitle?.length > 15 ? song.songTitle.substring(0, 24) : song.songTitle;
+          return {
+            ...playlistSong.dataValues,
+            songUrl: song.songUrl,
+            songCardUrl: song.songCardUrl,
+            albumCardUrl: song.albumCardUrl,
+            songTitle,
+            artistName: song.artistName,
+            youtubeId: song.youtubeId
+          };
+        }).filter(Boolean);
+
+        return {
+          playlistId: playlist.playlistId,
+          playlistName: playlist.playlistName,
+          songs: songsWithUrls
+        };
+      });
+
+      // 9. Filter mostPlayed
+      let mostPlayed = songData.filter(item => item.playlistName === 'MostPlayed');
+
       return res.status(200).send({
         code: 200,
         message: "Playlist and song data fetched successfully",
-        data: songData, mostPlayed
+        data: songData,
+        mostPlayed
       });
     } catch (error) {
       console.error("Error:", error.message);

@@ -27,7 +27,13 @@ module.exports = (sequelize, Sequelize) => {
         type: Sequelize.STRING
       },
       songUrl: {
+        type: Sequelize.TEXT
+      },
+      youtubeId: {
         type: Sequelize.STRING
+      },
+      tag: {
+        type: Sequelize.TEXT
       },
       songCardUrl: {
         type: Sequelize.STRING,
