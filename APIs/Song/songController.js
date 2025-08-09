@@ -518,7 +518,6 @@ exports.masterSearchForSongOrAlbum = async (req, res) => {
 ////////////////////////
 
 
-
 exports.ytdlUrl = async (req, res) => {
     const videoId = req.params.searchKey;
 
@@ -531,7 +530,7 @@ exports.ytdlUrl = async (req, res) => {
 
         let songUrl = existingSong?.[0]?.songUrl;
 
-        // Function to validate if YouTube URL is still working
+        // Validate if YouTube URL still works
         const isUrlValid = (url) => {
             return new Promise((resolve) => {
                 https.get(url, (resp) => {
@@ -540,19 +539,24 @@ exports.ytdlUrl = async (req, res) => {
             });
         };
 
-        // 2️⃣ If URL exists & still valid → use it
+        // 2️⃣ If URL exists & is valid → use it
         if (songUrl && await isUrlValid(songUrl)) {
             console.log('✅ Using cached songUrl from DB');
-        } 
-        // 3️⃣ Else → fetch fresh URL from YouTube
-        else {
+        } else {
             console.log('♻️ Fetching new songUrl from YouTube...');
             const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-            const info = await ytdl.getInfo(videoUrl);
-            const format = ytdl.chooseFormat(info.formats, {
-                quality: 'highestaudio',
-                filter: 'audioonly'
+
+            // Fetch video info with youtube-dl-exec
+            const info = await youtubedl(videoUrl, {
+                dumpSingleJson: true,
+                noWarnings: true,
+                noCallHome: true,
+                preferFreeFormats: true,
+                format: 'bestaudio'
             });
+
+            // Pick the best audio format
+            const format = info.formats.find(f => f.asr && f.url && f.vcodec === 'none');
 
             if (!format?.url) {
                 return res.status(404).json({ error: 'Audio stream not found.' });
@@ -560,7 +564,7 @@ exports.ytdlUrl = async (req, res) => {
 
             songUrl = format.url;
 
-            // Update DB with new URL
+            // Update DB
             await db.sequelize.query(
                 `UPDATE songs SET songUrl = :songUrl WHERE youtubeId = :videoId`,
                 { replacements: { songUrl, videoId } }
@@ -604,6 +608,7 @@ exports.ytdlUrl = async (req, res) => {
         res.status(500).json({ error: 'Failed to stream audio' });
     }
 };
+
 
 
 

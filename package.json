@@ -29,7 +29,6 @@
     "package": "^1.0.1",
     "pg": "^8.11.5",
     "sequelize": "^6.37.1",
-    "youtube-dl-exec": "^3.0.23",
-    "ytdl-core": "^4.11.5"
+    "youtube-dl-exec": "^3.0.23"
   }
 }
