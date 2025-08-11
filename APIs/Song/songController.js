@@ -10,8 +10,8 @@ const { exec } = require('child_process');
 const { where } = require("sequelize");
 const {saveFileAndGetNameByBase64} = require('../services/upload-files/service')
 const { Sequelize } = require('sequelize'); // Ensure Sequelize is imported
-const cookiesPath = path.resolve(__dirname, '../../config/cookies.txt');
-// const cookiesPath = '/home/ubuntu/sarmusicapi/config/cookies.txt'
+// const cookiesPath = path.resolve(__dirname, '../../config/cookies.txt');
+const cookiesPath = '/home/ubuntu/sarmusicapi/config/cookies.txt'
 const fs = require('fs');
 //=============== create song  ======//
 
