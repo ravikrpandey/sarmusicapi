@@ -12,6 +12,7 @@ const {saveFileAndGetNameByBase64} = require('../services/upload-files/service')
 const { Sequelize } = require('sequelize'); // Ensure Sequelize is imported
 const cookiesPath = path.resolve(__dirname, 'cookies.txt');
 // const cookiesPath = '/home/ubuntu/sarmusicapi/config/cookies.txt'
+const fs = require('fs');
 //=============== create song  ======//
 
 // exports.createSong = async (req, res) => {
@@ -522,6 +523,19 @@ exports.masterSearchForSongOrAlbum = async (req, res) => {
 
 
 exports.ytdlUrl = async (req, res) => {
+
+
+
+
+// const pathToCookie = '/home/ubuntu/sarmusicapi/APIs/Song/cookies.txt';
+
+if (fs.existsSync(cookiesPath)) {
+    console.log("✅ File exists:", cookiesPath);
+} else {
+    console.log("❌ File not found:", cookiesPath);
+}
+
+
     const videoId = req.params.searchKey;
 
     try {
