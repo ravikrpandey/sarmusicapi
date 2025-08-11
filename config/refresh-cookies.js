@@ -25,10 +25,16 @@ async function exportCookiesToNetscapeFormat(cookies) {
 }
 
 async function main() {
+  // const browser = await puppeteer.launch({
+  //   headless: true,
+  //   args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  // });
+
   const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    headless: 'new', // or true for older versions
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
   });
+  
 
   const page = await browser.newPage();
 
