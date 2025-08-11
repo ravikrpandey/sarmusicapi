@@ -1,7 +1,6 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
-const tough = require('tough-cookie');
 
 const COOKIES_FILE = path.resolve(__dirname, 'cookies.txt');
 const LOGIN_URL = 'https://www.youtube.com/';
@@ -33,22 +32,21 @@ async function main() {
 
   const page = await browser.newPage();
 
-  // Load previous cookies if available (to keep session)
+  // Load previous cookies if available (optional, here you start fresh)
   if (fs.existsSync(COOKIES_FILE)) {
-    const cookieText = fs.readFileSync(COOKIES_FILE, 'utf8');
-    // Parsing Netscape format back to Puppeteer cookies is complex, so for simplicity start fresh login here
+    // You can implement loading cookies if needed
   }
 
   console.log('Opening YouTube login page. Please login manually if required.');
   await page.goto(LOGIN_URL, { waitUntil: 'networkidle2' });
 
-  // Wait some time or wait for login to complete manually (or automate login if you want)
-  await new Promise(resolve => setTimeout(resolve, 60000)); // wait 60 seconds to allow manual login on server (you can do this via VNC/remote browser)
+  // Wait 60 seconds for manual login (you can increase if needed)
+  await new Promise(resolve => setTimeout(resolve, 60000));
 
-  // Get cookies
+  // Get cookies after login
   const cookies = await page.cookies();
 
-  // Export to Netscape format
+  // Export cookies in Netscape format
   const netscapeCookies = await exportCookiesToNetscapeFormat(cookies);
 
   fs.writeFileSync(COOKIES_FILE, netscapeCookies);
