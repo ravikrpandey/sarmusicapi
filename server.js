@@ -3,6 +3,10 @@ const path = require("path");
 const cors = require("cors");
 const http = require("http");
 
+// scripts/scheduler.js
+const schedule = require("node-schedule");
+const { exec } = require("child_process");
+
 const dotenv = require("dotenv");
 var bodyParser = require("body-parser");
 
@@ -78,6 +82,33 @@ require("./APIs/Playlist/playlistRoute")(app);
 require('./APIs/PlaylistSong/playlistSongRoute')(app);
 require("./APIs/Song/songRoute")(app);
 require("./APIs/UserActivity/userActivityRoute")(app)
+
+
+
+
+// // Refresh cookies every day at 2 AM
+// schedule.scheduleJob("0 2 * * *", () => {
+//     console.log("🔄 Refreshing YouTube cookies...");
+//     exec("node scripts/getYoutubeCookies.js", (err, stdout, stderr) => {
+//         if (err) {
+//             console.error("❌ Error refreshing cookies:", err);
+//         } else {
+//             console.log("✅ Cookies refreshed successfully");
+//         }
+//     });
+// });
+
+console.log("🔄 Refreshing YouTube cookies...");
+exec("node config/refresh-cookies.js", (err, stdout, stderr) => {
+    if (err) {
+        console.error("❌ Error refreshing cookies:", err);
+    } else {
+        console.log("✅ Cookies refreshed successfully");
+        console.log(stdout);
+    }
+});
+
+
 
 
 

@@ -2,17 +2,27 @@ const db = require("../../IndexFiles/modelsIndex")
 const tbl_song = db.song;
 const tbl_album = db.album
 // const ytdl = require('ytdl-core');
-const youtubedl = require('youtube-dl-exec');
-// const ytdl = require('ytdl-core');
+// const youtubedl = require('youtube-dl-exec');
+const youtubedl = require('yt-dlp-exec');
+// const youtubedl = require('ytdl-core');
 const https = require('https');
 const path = require('path');
 const { exec } = require('child_process');
 const { where } = require("sequelize");
 const {saveFileAndGetNameByBase64} = require('../services/upload-files/service')
 const { Sequelize } = require('sequelize'); // Ensure Sequelize is imported
-// const cookiesPath = path.resolve(__dirname, '../../config/cookies.txt');
-const cookiesPath = '/home/ubuntu/sarmusicapi/config/cookies.txt'
+const cookiesPath = path.resolve(__dirname, '../../config/cookies.txt');
+const streamPath = path.resolve(__dirname, '../python/stream_audio.py');
+// const cookiesPath = '/home/ubuntu/sarmusicapi/config/cookies.txt'
 const fs = require('fs');
+const { spawn } = require("child_process");
+const { refreshCookies } = require("../../config/refresh-cookies");
+
+(async () => {
+    console.log("🔄 Testing cookie refresh...");
+    await refreshCookies();
+})();
+
 //=============== create song  ======//
 
 // exports.createSong = async (req, res) => {
@@ -523,18 +533,11 @@ exports.masterSearchForSongOrAlbum = async (req, res) => {
 
 
 exports.ytdlUrl = async (req, res) => {
-
-
-
-
-// const pathToCookie = '/home/ubuntu/sarmusicapi/APIs/Song/cookies.txt';
-
-if (fs.existsSync(cookiesPath)) {
-    console.log("✅ File exists:", cookiesPath);
-} else {
-    console.log("❌ File not found:", cookiesPath);
-}
-
+    if (fs.existsSync(cookiesPath)) {
+        console.log("✅ File exists:", cookiesPath);
+    } else {
+        console.log("❌ File not found:", cookiesPath);
+    }
 
     const videoId = req.params.searchKey;
 
@@ -570,6 +573,7 @@ if (fs.existsSync(cookiesPath)) {
                 noCallHome: true,
                 preferFreeFormats: true,
                 cookies: cookiesPath,
+                // cookiesFromBrowser: 'chrome',
                 format: 'bestaudio'
             });
 
@@ -627,6 +631,111 @@ if (fs.existsSync(cookiesPath)) {
     }
 };
 
+
+
+
+
+
+///////////////////////////
+
+
+
+
+
+
+
+// exports.ytdlUrl = async (req, res) => {
+//     if (fs.existsSync(cookiesPath)) {
+//         console.log("✅ File exists:", cookiesPath);
+//     } else {
+//         console.log("❌ File not found:", cookiesPath);
+//     }
+
+//     const videoId = req.params.searchKey;
+
+//     try {
+//         // 1️⃣ Check DB for cached song
+//         const [existingSong] = await db.sequelize.query(
+//             `SELECT songUrl FROM songs WHERE youtubeId = :videoId LIMIT 1`,
+//             { replacements: { videoId } }
+//         );
+
+//         let songUrl = existingSong?.[0]?.songUrl;
+
+//         // Helper to check if URL is still valid
+//         const isUrlValid = (url) => {
+//             return new Promise((resolve) => {
+//                 https.get(url, (resp) => {
+//                     resolve(resp.statusCode === 200 || resp.statusCode === 206);
+//                 }).on("error", () => resolve(false));
+//             });
+//         };
+
+//         if (!songUrl || !(await isUrlValid(songUrl))) {
+//             console.log("♻️ Fetching new song URL from Python yt-dlp...");
+
+//             const pythonProcess = spawn("python3", [
+//                 streamPath,
+//                 videoId
+//             ]);
+
+//             let output = "";
+//             pythonProcess.stdout.on("data", (data) => (output += data));
+//             pythonProcess.on("close", async () => {
+//                 const result = JSON.parse(output);
+//                 if (result.stream_url) {
+//                     songUrl = result.stream_url;
+//                     await db.sequelize.query(
+//                         `UPDATE songs SET songUrl = :songUrl WHERE youtubeId = :videoId`,
+//                         { replacements: { songUrl, videoId } }
+//                     );
+//                     streamAudio(songUrl, req, res);
+//                 } else {
+//                     res.status(500).json({ error: result.error || "Failed to get stream URL" });
+//                 }
+//             });
+//         } else {
+//             console.log("✅ Using cached song URL");
+//             streamAudio(songUrl, req, res);
+//         }
+//     } catch (err) {
+//         console.error("Error in ytdlUrl:", err.message);
+//         res.status(500).json({ error: "Failed to stream audio" });
+//     }
+// };
+
+// function streamAudio(songUrl, req, res) {
+//     const options = {};
+//     if (req.headers.range) {
+//         options.headers = { Range: req.headers.range };
+//     }
+
+//     res.setHeader("Accept-Ranges", "bytes");
+//     res.setHeader("Content-Type", "audio/mp4");
+
+//     https.get(songUrl, options, (stream) => {
+//         if (stream.statusCode === 206) {
+//             res.writeHead(206, stream.headers);
+//         }
+//         stream.pipe(res);
+
+//         stream.on("error", (err) => {
+//             console.error("Stream error:", err);
+//             if (!res.headersSent) {
+//                 res.status(500).json({ error: "Audio stream failed" });
+//             } else {
+//                 res.destroy(err);
+//             }
+//         });
+//     }).on("error", (err) => {
+//         console.error("Request error:", err);
+//         if (!res.headersSent) {
+//             res.status(500).json({ error: "Failed to connect to audio stream" });
+//         } else {
+//             res.destroy(err);
+//         }
+//     });
+// }
 
 
 
