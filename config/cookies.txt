@@ -1,0 +1,6 @@
+# Netscape HTTP Cookie File
+# Generated for yt-dlp
+
+.google.com	TRUE	/	TRUE	1771065	NID	525=bjaBa62PRHbeCXb_2-ivEqZh-ouUjoOPZC0T-7zuEk_JCMqhVUmzChd1-M6BMFdElMGL4mdud65JCBAw0xJEHcNQD7uihTBlotoWW4wghNgK8fe9c0UtDnEHW-xgoiui-LW01odnGeGaYsC6fRR1KhylMCRvTCTjqQ09181B8k_XqhpZoSUh-KkqMeH5bi4KnQ
+.accounts.google.com	TRUE	/	TRUE	1757846	OTZ	8215841_34_34__34_
+.accounts.google.com	TRUE	/	TRUE	1789814	__Host-GAPS	1:NNOt_zc4VRSxTiQrDDncrFIBNfZSPA:yDD8Tx-wuxIBBoXU

@@ -10,104 +10,24 @@ const path = require('path');
 const { exec } = require('child_process');
 const {saveFileAndGetNameByBase64} = require('../services/upload-files/service')
 const { Sequelize } = require('sequelize'); // Ensure Sequelize is imported
-// const cookiesPath = path.resolve(__dirname, '../../config/cookies.txt');
+const cookiesPath = path.resolve(__dirname, '../../config/cookies.txt');
 const streamPath = path.resolve(__dirname, '../python/stream_audio.py');
-const cookiesPath = '/home/ubuntu/sarmusicapi/cookies.txt'
+// const cookiesPath = '/home/ubuntu/sarmusicapi/cookies.txt'
 const fs = require('fs');
-const { spawn } = require("child_process");
-const { refreshCookies } = require("../../config/refresh-cookies.mjs");
+
+
+
+
+
+
+let refreshCookies;
 
 (async () => {
-    console.log("🔄 Testing cookie refresh...");
-    await refreshCookies();
+    refreshCookies = (await import('../../config/refresh-cookies.js')).refreshCookies;
 })();
 
 //=============== create song  ======//
 
-// exports.createSong = async (req, res) => {
-//     try {
-//         const createdSongs = [];
-//         for (let songData of req.body) {
-//             let { albumId, albumName, artistId, artistName, songTitle, duration, songUrl, songFile, releaseDate, genre, albumCardUrl, songCardUrl, youtubeUrl, tag } = songData;
-
-//             let filePath = songUrl;
-//             let youtubeId = null;
-//             let youtubeInfo = null;
-
-//             // If youtubeUrl is provided, extract details from YouTube
-//             if (youtubeUrl) {
-//                 try {
-//                     // Extract YouTube video ID from the URL
-//                     const youtubeIdMatch = youtubeUrl.match(/(?:v=|\/)([0-9A-Za-z_-]{11})(?:\?|&|$)/);
-//                     if (youtubeIdMatch && youtubeIdMatch[1]) {
-//                         youtubeId = youtubeIdMatch[1];
-//                     } else {
-//                         // fallback: try to match just 11-char id
-//                         const fallbackId = youtubeUrl.match(/([0-9A-Za-z_-]{11})/);
-//                         if (fallbackId && fallbackId[1]) {
-//                             youtubeId = fallbackId[1];
-//                         }
-//                     }
-
-//                     if (!youtubeId) {
-//                         return res.status(400).send({ code: 400, message: "Invalid YouTube URL, could not extract video ID" });
-//                     }
-
-//                     const url = `https://www.youtube.com/watch?v=${youtubeId}`;
-
-//                     youtubeInfo = await youtubedl(url, {
-//                         dumpSingleJson: true,
-//                         preferFreeFormats: true,
-//                         noCheckCertificates: true,
-//                         noWarnings: true,
-//                     });
-
-//                     // Extract title, duration, etc. if not provided
-//                     if (!songTitle && youtubeInfo.title) songTitle = youtubeInfo.title;
-//                     if (!duration && youtubeInfo.duration) duration = youtubeInfo.duration_string.toString();
-//                     if (!songCardUrl && youtubeInfo.thumbnail) songCardUrl = youtubeInfo.thumbnail;
-//                     if (!artistName && youtubeInfo.uploader) artistName = youtubeInfo.uploader;
-//                     if (!releaseDate && youtubeInfo.upload_date) releaseDate = youtubeInfo.upload_date;
-//                     if (!tag && youtubeInfo.tags) tag = JSON.stringify(youtubeInfo.tags);
-
-//                     // Set songUrl to best audio format url
-//                     const audio = youtubeInfo.formats && youtubeInfo.formats.find(
-//                         f => f.asr && f.acodec !== 'none' && f.vcodec === 'none'
-//                     );
-//                     if (audio && audio.url) filePath = audio.url;
-//                 } catch (err) {
-//                     return res.status(400).send({ code: 400, message: "Failed to extract YouTube details", error: err.message });
-//                 }
-//             }
-
-//             if (songFile) {
-//                 filePath = await saveFileAndGetNameByBase64(songFile, songTitle);
-//             }
-
-//             // Save song data to the database
-//             const createdSong = await tbl_song.create({
-//                 albumId,
-//                 albumName,
-//                 artistId,
-//                 artistName,
-//                 songTitle,
-//                 duration,
-//                 songUrl: filePath,
-//                 releaseDate,
-//                 genre,
-//                 albumCardUrl,
-//                 songCardUrl,
-//                 youtubeId,
-//                 tag
-//             });
-//             createdSongs.push(createdSong);
-//         }
-
-//         return res.status(200).send({ code: 200, message: 'Songs Created Successfully', data: createdSongs });
-//     } catch (error) {
-//         return res.status(500).send({ code: 500, message: error.message || "Internal server error" });
-//     }
-// };
 
 exports.createSong = async (req, res) => {
     try {
@@ -532,13 +452,12 @@ exports.masterSearchForSongOrAlbum = async (req, res) => {
 
 
 exports.ytdlUrl = async (req, res) => {
-    if (fs.existsSync(cookiesPath)) {
-        console.log("✅ File exists:", cookiesPath);
-    } else {
-        console.log("❌ File not found:", cookiesPath);
-    }
-
     const videoId = req.params.searchKey;
+
+    if (!fs.existsSync(cookiesPath)) {
+        console.error("❌ Cookies file not found. Please refresh cookies manually.");
+        return res.status(500).json({ error: "Cookies missing. Refresh cookies manually." });
+    }
 
     try {
         // 1️⃣ Check if songUrl exists in DB
@@ -549,79 +468,68 @@ exports.ytdlUrl = async (req, res) => {
 
         let songUrl = existingSong?.[0]?.songUrl;
 
-        // Validate if YouTube URL still works
-        const isUrlValid = (url) => {
-            return new Promise((resolve) => {
-                https.get(url, (resp) => {
-                    resolve(resp.statusCode === 200 || resp.statusCode === 206);
-                }).on('error', () => resolve(false));
-            });
-        };
+        const isUrlValid = (url) => new Promise(resolve => {
+            https.get(url, resp => resolve(resp.statusCode === 200 || resp.statusCode === 206))
+                .on('error', () => resolve(false));
+        });
 
-        // 2️⃣ If URL exists & is valid → use it
+        // 2️⃣ Use cached URL if valid
         if (songUrl && await isUrlValid(songUrl)) {
             console.log('✅ Using cached songUrl from DB');
         } else {
             console.log('♻️ Fetching new songUrl from YouTube...');
             const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
-            // Fetch video info with youtube-dl-exec
-            const info = await youtubedl(videoUrl, {
-                dumpSingleJson: true,
-                noWarnings: true,
-                noCallHome: true,
-                preferFreeFormats: true,
-                cookies: cookiesPath,
-                // cookiesFromBrowser: 'chrome',
-                format: 'bestaudio'
-            });
-
-            // Pick the best audio format
-            const format = info.formats.find(f => f.asr && f.url && f.vcodec === 'none');
-
-            if (!format?.url) {
-                return res.status(404).json({ error: 'Audio stream not found.' });
+            if (!fs.existsSync(cookiesPath)) {
+                console.log("♻️ Cookies not found, refreshing...");
+                await refreshCookies();
             }
+            
+
+            let info;
+            try {
+                info = await youtubedl(videoUrl, {
+                    dumpSingleJson: true,
+                    noWarnings: true,
+                    noCallHome: true,
+                    preferFreeFormats: true,
+                    cookies: cookiesPath,
+                    format: 'bestaudio'
+                });
+            } catch (err) {
+                console.error("❌ Failed to fetch video info. Possibly invalid cookies.");
+                return res.status(500).json({ error: "Failed to fetch video info. Refresh cookies manually." });
+            }
+
+            const format = info.formats.find(f => f.asr && f.url && f.vcodec === 'none');
+            if (!format?.url) return res.status(404).json({ error: 'Audio stream not found.' });
 
             songUrl = format.url;
 
-            // Update DB
+            // 3️⃣ Update DB
             await db.sequelize.query(
                 `UPDATE songs SET songUrl = :songUrl WHERE youtubeId = :videoId`,
                 { replacements: { songUrl, videoId } }
             );
         }
 
-        // 4️⃣ Stream the audio
-        const options = {};
-        if (req.headers.range) {
-            options.headers = { Range: req.headers.range };
-        }
-
+        // 4️⃣ Stream audio
+        const options = req.headers.range ? { headers: { Range: req.headers.range } } : {};
         res.setHeader('Accept-Ranges', 'bytes');
         res.setHeader('Content-Type', 'audio/mp4');
 
-        https.get(songUrl, options, (stream) => {
-            if (stream.statusCode === 206) {
-                res.writeHead(206, stream.headers);
-            }
+        https.get(songUrl, options, stream => {
+            if (stream.statusCode === 206) res.writeHead(206, stream.headers);
             stream.pipe(res);
-
-            stream.on('error', (err) => {
+            stream.on('error', err => {
                 console.error('Stream error:', err);
-                if (!res.headersSent) {
-                    res.status(500).json({ error: 'Audio stream failed during transfer.' });
-                } else {
-                    res.destroy(err);
-                }
+                if (!res.headersSent) res.status(500).json({ error: 'Audio stream failed.' });
+                else res.destroy(err);
             });
-        }).on('error', (err) => {
+        }).on('error', err => {
             console.error('Request error:', err);
-            if (!res.headersSent) {
-                res.status(500).json({ error: 'Failed to establish audio stream connection.' });
-            } else {
-                res.destroy(err);
-            }
+            if (!res.headersSent) res.status(500).json({ error: 'Failed to connect to audio stream.' });
+            else res.destroy(err);
         });
 
     } catch (error) {
@@ -643,17 +551,14 @@ exports.ytdlUrl = async (req, res) => {
 
 
 
-// exports.ytdlUrl = async (req, res) => {
-//     if (fs.existsSync(cookiesPath)) {
-//         console.log("✅ File exists:", cookiesPath);
-//     } else {
-//         console.log("❌ File not found:", cookiesPath);
-//     }
 
+// path to your valid cookies file
+
+// exports.ytdlUrl = async (req, res) => {
 //     const videoId = req.params.searchKey;
 
 //     try {
-//         // 1️⃣ Check DB for cached song
+//         // 1️⃣ Check if songUrl exists in DB
 //         const [existingSong] = await db.sequelize.query(
 //             `SELECT songUrl FROM songs WHERE youtubeId = :videoId LIMIT 1`,
 //             { replacements: { videoId } }
@@ -661,82 +566,83 @@ exports.ytdlUrl = async (req, res) => {
 
 //         let songUrl = existingSong?.[0]?.songUrl;
 
-//         // Helper to check if URL is still valid
-//         const isUrlValid = (url) => {
-//             return new Promise((resolve) => {
-//                 https.get(url, (resp) => {
-//                     resolve(resp.statusCode === 200 || resp.statusCode === 206);
-//                 }).on("error", () => resolve(false));
-//             });
-//         };
+//         // Function to check if URL is valid
+//         const isUrlValid = (url) => new Promise(resolve => {
+//             https.get(url, resp => resolve(resp.statusCode === 200 || resp.statusCode === 206))
+//                 .on('error', () => resolve(false));
+//         });
 
-//         if (!songUrl || !(await isUrlValid(songUrl))) {
-//             console.log("♻️ Fetching new song URL from Python yt-dlp...");
-
-//             const pythonProcess = spawn("python3", [
-//                 streamPath,
-//                 videoId
-//             ]);
-
-//             let output = "";
-//             pythonProcess.stdout.on("data", (data) => (output += data));
-//             pythonProcess.on("close", async () => {
-//                 const result = JSON.parse(output);
-//                 if (result.stream_url) {
-//                     songUrl = result.stream_url;
-//                     await db.sequelize.query(
-//                         `UPDATE songs SET songUrl = :songUrl WHERE youtubeId = :videoId`,
-//                         { replacements: { songUrl, videoId } }
-//                     );
-//                     streamAudio(songUrl, req, res);
-//                 } else {
-//                     res.status(500).json({ error: result.error || "Failed to get stream URL" });
-//                 }
-//             });
+//         // 2️⃣ If cached URL exists & is valid → use it
+//         if (songUrl && await isUrlValid(songUrl)) {
+//             console.log('✅ Using cached songUrl from DB');
 //         } else {
-//             console.log("✅ Using cached song URL");
-//             streamAudio(songUrl, req, res);
+//             console.log('♻️ Fetching new songUrl from YouTube...');
+//             const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+//             // Check if cookies.txt exists
+//             if (!fs.existsSync(cookiesPath)) {
+//                 return res.status(500).json({ error: '❌ cookies.txt not found. Run Puppeteer login first.' });
+//             }
+
+//             // Fetch video info using system yt-dlp
+//             const info = await new Promise((resolve, reject) => {
+//                 execFile('yt-dlp', [
+//                     '--dump-single-json',
+//                     '--no-warnings',
+//                     '--no-call-home',
+//                     '--prefer-free-formats',
+//                     '--cookies', cookiesPath,
+//                     '--format', 'bestaudio',
+//                     videoUrl
+//                 ], { maxBuffer: 1024 * 1024 * 50 }, (err, stdout) => {
+//                     if (err) return reject(err);
+//                     try {
+//                         resolve(JSON.parse(stdout));
+//                     } catch (e) {
+//                         reject(e);
+//                     }
+//                 });
+//             });
+
+//             // Pick best audio format
+//             const format = info.formats.find(f => f.asr && f.url && f.vcodec === 'none');
+//             if (!format?.url) {
+//                 return res.status(404).json({ error: 'Audio stream not found.' });
+//             }
+
+//             songUrl = format.url;
+
+//             // Update DB
+//             await db.sequelize.query(
+//                 `UPDATE songs SET songUrl = :songUrl WHERE youtubeId = :videoId`,
+//                 { replacements: { songUrl, videoId } }
+//             );
 //         }
-//     } catch (err) {
-//         console.error("Error in ytdlUrl:", err.message);
-//         res.status(500).json({ error: "Failed to stream audio" });
+
+//         // 4️⃣ Stream the audio
+//         const options = {};
+//         if (req.headers.range) options.headers = { Range: req.headers.range };
+
+//         res.setHeader('Accept-Ranges', 'bytes');
+//         res.setHeader('Content-Type', 'audio/mp4');
+
+//         https.get(songUrl, options, (stream) => {
+//             if (stream.statusCode === 206) res.writeHead(206, stream.headers);
+//             stream.pipe(res);
+
+//             stream.on('error', err => {
+//                 console.error('Stream error:', err);
+//                 if (!res.headersSent) res.status(500).json({ error: 'Audio stream failed during transfer.' });
+//                 else res.destroy(err);
+//             });
+//         }).on('error', err => {
+//             console.error('Request error:', err);
+//             if (!res.headersSent) res.status(500).json({ error: 'Failed to establish audio stream connection.' });
+//             else res.destroy(err);
+//         });
+
+//     } catch (error) {
+//         console.error('Error in ytdlUrl:', error.message);
+//         res.status(500).json({ error: 'Failed to stream audio. Possibly invalid cookies.' });
 //     }
 // };
-
-// function streamAudio(songUrl, req, res) {
-//     const options = {};
-//     if (req.headers.range) {
-//         options.headers = { Range: req.headers.range };
-//     }
-
-//     res.setHeader("Accept-Ranges", "bytes");
-//     res.setHeader("Content-Type", "audio/mp4");
-
-//     https.get(songUrl, options, (stream) => {
-//         if (stream.statusCode === 206) {
-//             res.writeHead(206, stream.headers);
-//         }
-//         stream.pipe(res);
-
-//         stream.on("error", (err) => {
-//             console.error("Stream error:", err);
-//             if (!res.headersSent) {
-//                 res.status(500).json({ error: "Audio stream failed" });
-//             } else {
-//                 res.destroy(err);
-//             }
-//         });
-//     }).on("error", (err) => {
-//         console.error("Request error:", err);
-//         if (!res.headersSent) {
-//             res.status(500).json({ error: "Failed to connect to audio stream" });
-//         } else {
-//             res.destroy(err);
-//         }
-//     });
-// }
-
-
-
-
-
