@@ -135,13 +135,9 @@ async function exportCookiesToNetscapeFormat(cookies) {
     const flag = cookie.hostOnly ? "FALSE" : "TRUE";
     const pathVal = cookie.path;
     const secure = cookie.secure ? "TRUE" : "FALSE";
-
-    // ✅ Fix for yt-dlp: if expires is -1 or missing, use year 2038
-    const expiration =
-      !cookie.expires || cookie.expires < 0
-        ? 2147483647
-        : Math.floor(new Date(cookie.expires).getTime() / 1000);
-
+    const expiration = cookie.expires
+      ? Math.floor(cookie.expires)
+      : 2147483647;
     const name = cookie.name;
     const value = cookie.value;
 
@@ -155,8 +151,7 @@ export async function refreshCookies() {
   console.log("🌐 Launching Chrome for YouTube login...");
 
   const browser = await puppeteer.launch({
-    headless: false,
-    executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", // Use real Chrome on local
+    headless: true, // true on server
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
@@ -169,7 +164,7 @@ export async function refreshCookies() {
 
   // Make browser look human-like
   await page.setUserAgent(
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 " +
     "(KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
   );
   await page.setViewport({ width: 1366, height: 768 });
@@ -179,18 +174,17 @@ export async function refreshCookies() {
   console.log("🔹 Logging in with provided credentials...");
 
   // Enter email
-  await page.type("input[type='email']", YOUTUBE_EMAIL, { delay: 100 });
+  await page.type("input[type='email']", YOUTUBE_EMAIL, { delay: 50 });
   await page.click("#identifierNext");
-  await new Promise(res => setTimeout(res, 2000));
+  await page.waitForTimeout(3000);
 
   // Enter password
   await page.waitForSelector("input[type='password']", { visible: true });
-  await page.type("input[type='password']", YOUTUBE_PASSWORD, { delay: 100 });
+  await page.type("input[type='password']", YOUTUBE_PASSWORD, { delay: 50 });
   await page.click("#passwordNext");
 
-  // Wait for login success (YouTube home page)
+  // Wait until YouTube home page loads or some element unique to logged-in
   await page.waitForNavigation({ waitUntil: "networkidle2" });
-
   console.log("✅ Logged in successfully, saving cookies...");
 
   const cookies = await page.cookies();
