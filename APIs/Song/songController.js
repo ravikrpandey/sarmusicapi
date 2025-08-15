@@ -11,13 +11,16 @@ const { exec } = require('child_process');
 const {saveFileAndGetNameByBase64} = require('../services/upload-files/service')
 const { Sequelize } = require('sequelize'); // Ensure Sequelize is imported
 // const cookiesPath = path.resolve(__dirname, '../../config/cookies.txt');
-// const cookiesPath = path.resolve(__dirname, '../../cookies.txt');
 const streamPath = path.resolve(__dirname, '../python/stream_audio.py');
 const cookiesPath = '/home/ubuntu/sarmusicapi/cookies.txt'
 const fs = require('fs');
 const { spawn } = require("child_process");
 const { refreshCookies } = require("../../config/refresh-cookies.mjs");
 
+(async () => {
+    console.log("🔄 Testing cookie refresh...");
+    await refreshCookies();
+})();
 
 //=============== create song  ======//
 
@@ -557,10 +560,6 @@ exports.ytdlUrl = async (req, res) => {
 
         // 2️⃣ If URL exists & is valid → use it
         if (songUrl && await isUrlValid(songUrl)) {
-            (async () => {
-                console.log("🔄 Testing cookie refresh...");
-                await refreshCookies();
-            })();
             console.log('✅ Using cached songUrl from DB');
         } else {
             console.log('♻️ Fetching new songUrl from YouTube...');
