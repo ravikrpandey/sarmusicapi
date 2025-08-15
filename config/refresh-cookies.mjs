@@ -135,9 +135,13 @@ async function exportCookiesToNetscapeFormat(cookies) {
     const flag = cookie.hostOnly ? "FALSE" : "TRUE";
     const pathVal = cookie.path;
     const secure = cookie.secure ? "TRUE" : "FALSE";
-    const expiration = cookie.expires
-      ? Math.floor(new Date(cookie.expires).getTime() / 1000)
-      : 2147483647;
+
+    // ✅ Fix for yt-dlp: if expires is -1 or missing, use year 2038
+    const expiration =
+      !cookie.expires || cookie.expires < 0
+        ? 2147483647
+        : Math.floor(new Date(cookie.expires).getTime() / 1000);
+
     const name = cookie.name;
     const value = cookie.value;
 
@@ -152,7 +156,7 @@ export async function refreshCookies() {
 
   const browser = await puppeteer.launch({
     headless: false,
-    executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", // Use real Chrome
+    executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", // Use real Chrome on local
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
