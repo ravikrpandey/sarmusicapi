@@ -12,13 +12,15 @@ module.exports = (sequelize, Sequelize) => {
         type: Sequelize.STRING
       },
       albumCardUrl: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        defaultValue: 'https://www.shutterstock.com/image-vector/music-display-theme-platform-sample-260nw-2248655619.jpg'
       },
       artistId: {
         type: Sequelize.INTEGER
       },
       artistName: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        defaultValue: 'https://www.shutterstock.com/image-vector/music-display-theme-platform-sample-260nw-2248655619.jpg'
       },
       songTitle: {
         type: Sequelize.STRING
@@ -37,7 +39,7 @@ module.exports = (sequelize, Sequelize) => {
       },
       songCardUrl: {
         type: Sequelize.STRING,
-        defaultValue: ''
+        defaultValue: 'https://www.shutterstock.com/image-vector/music-display-theme-platform-sample-260nw-2248655619.jpg'
       },
       releaseDate: {
         type: Sequelize.STRING
