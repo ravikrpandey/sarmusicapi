@@ -67,6 +67,7 @@ exports.createSong = async (req, res) => {
                             skipDownload: true,
                             noPlaylist: true,
                             noCheckCertificates: true,
+                            cookies: cookiesPath,
                             noWarnings: true,
                         });
 
