@@ -87,17 +87,17 @@ require("./APIs/UserActivity/userActivityRoute")(app)
 
 
 // Refresh cookies every 2 hours
-schedule.scheduleJob("0 */2 * * *", () => {
-  console.log("🔄 Refreshing YouTube cookies...");
-  exec("node config/refresh-cookies.js", (err, stdout, stderr) => {
-      if (err) {
-          console.error("❌ Error refreshing cookies:", err);
-      } else {
-          console.log("✅ Cookies refreshed successfully");
-          console.log(stdout); // optional: show script output
-      }
-  });
-});
+// schedule.scheduleJob("0 */2 * * *", () => {
+//   console.log("🔄 Refreshing YouTube cookies...");
+//   exec("node config/refresh-cookies.js", (err, stdout, stderr) => {
+//       if (err) {
+//           console.error("❌ Error refreshing cookies:", err);
+//       } else {
+//           console.log("✅ Cookies refreshed successfully");
+//           console.log(stdout); // optional: show script output
+//       }
+//   });
+// });
 
 // console.log("🔄 Refreshing YouTube cookies...");
 // exec("node config/refresh-cookies.js", (err, stdout, stderr) => {

@@ -10,9 +10,9 @@ const path = require('path');
 const { exec } = require('child_process');
 const {saveFileAndGetNameByBase64} = require('../services/upload-files/service')
 const { Sequelize } = require('sequelize'); // Ensure Sequelize is imported
-const cookiesPath = path.resolve(__dirname, '../../config/cookies.txt');
+// const cookiesPath = path.resolve(__dirname, '../../config/cookies.txt');
 const streamPath = path.resolve(__dirname, '../python/stream_audio.py');
-// const cookiesPath = '/home/ubuntu/sarmusicapi/cookies.txt'
+const cookiesPath = '/home/ubuntu/sarmusicapi/config/cookies.txt'
 const fs = require('fs');
 
 
@@ -20,11 +20,11 @@ const fs = require('fs');
 
 
 
-let refreshCookies;
+// let refreshCookies;
 
-(async () => {
-    refreshCookies = (await import('../../config/refresh-cookies.js')).refreshCookies;
-})();
+// (async () => {
+//     refreshCookies = (await import('../../config/refresh-cookies.js')).refreshCookies;
+// })();
 
 //=============== create song  ======//
 
@@ -482,7 +482,7 @@ exports.ytdlUrl = async (req, res) => {
 
             if (!fs.existsSync(cookiesPath)) {
                 console.log("♻️ Cookies not found, refreshing...");
-                await refreshCookies();
+                // await refreshCookies();
             }
             
 
