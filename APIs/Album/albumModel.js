@@ -21,7 +21,8 @@
             type: Sequelize.STRING
         },
         albumCardUrl: {
-            type: Sequelize.STRING
+            type: Sequelize.STRING,
+            defaultValue: 'https://www.shutterstock.com/image-vector/music-display-theme-platform-sample-260nw-2248655619.jpg'
         },
         isDeleted: {
             type: Sequelize.BOOLEAN,
