@@ -3,7 +3,8 @@ const db = require("../../IndexFiles/modelsIndex");
 const tbl_songPlayList = db.playlistSong;
 const tbl_playlist = db.playlist
 const { Op } = require('sequelize');
-const { default: youtubeDl } = require("youtube-dl-exec");
+// const { default: youtubeDl } = require("youtube-dl-exec");
+const { default: youtubeDl } = require("yt-dlp-exec");
 
 
 //=========== create songplaylist =========//
@@ -53,21 +54,31 @@ exports.createsongPlayList = async (req, res) => {
 
 //========== get songPlaylist ==============//
 
+function cleanTitle(title) {
+  if (!title) return "";
+  return title
+    .replace(/[^\x00-\x7F]/g, "")
+    .replace(/#/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^[^a-zA-Z0-9]+/, "");
+}
+
 exports.getSonPlayList = async (req , res)=>{
  try{
     const getData = await tbl_songPlayList.findAll({
         where:{
             isDeleted:false,
-            // songPlaylistName: "Sad song"
         },
-        // include: [{
-        //     model: tbl_playlist,
-        //     attributes: {
-        //         exclude: ['playlistName']
-        //     }
-        // }]
     })
-return res.status(200).send({code:200,message:"All Song Playlist Fetched Successfully", data:getData })
+    // Clean songTitle if available
+    const cleanedData = getData.map(item => {
+      if (item.songTitle) {
+        item.songTitle = cleanTitle(item.songTitle);
+      }
+      return item;
+    });
+    return res.status(200).send({code:200,message:"All Song Playlist Fetched Successfully", data:cleanedData })
  }catch(error){
     return res.status(500).send({code: 500, message: error.message || "internal server error"});
  }
@@ -83,6 +94,10 @@ exports.getSongPlaylistById = async (req, res) => {
                 playlistSongId: id
             }
         });
+        // Clean songTitle if available
+        if (data && data.songTitle) {
+          data.songTitle = cleanTitle(data.songTitle);
+        }
         return res.status(200).send({code: 200, message: "song playlist is fetched succesfully", data: data});
     }catch (error){
         return res.status(500).send({code: 500, message: error.message || "internal server error"});
@@ -116,6 +131,10 @@ exports.updateSonPlaylist = async (req, res) => {
         playlistSongId: playlistSongId
        }
     });
+    // Clean songTitle if available
+    if (updatedData2 && updatedData2.songTitle) {
+      updatedData2.songTitle = cleanTitle(updatedData2.songTitle);
+    }
     return res.status(200).send({code: 200, message: "songplaylist updated succesfully", data: updatedData2});
     }else {
         return res.status(422).send({code: 422, message: "invalid data"});
@@ -148,6 +167,10 @@ exports.deleteSongPlayList= async (req , res) =>{
                 playlistSongId : playlistSongId,
             }
         })
+        // Clean songTitle if available
+        if (showDelteData && showDelteData.songTitle) {
+          showDelteData.songTitle = cleanTitle(showDelteData.songTitle);
+        }
         return res.status(200).send({code:200,message:"Data deleted Successfully", data:showDelteData});
 }else{
     return res.status(422).send({code: 422, message: "invalid data"});
@@ -283,6 +306,10 @@ exports.updateSongPlayedCount = async (req, res) => {
       // Build a map for quick lookup
       const songMap = {};
       for (const song of allSongs) {
+        // Clean songTitle if available
+        if (song.songTitle) {
+          song.songTitle = cleanTitle(song.songTitle);
+        }
         songMap[song.songId] = song;
       }
 
@@ -293,6 +320,7 @@ exports.updateSongPlayedCount = async (req, res) => {
           const song = songMap[playlistSong.songId];
           if (!song) return null;
           let songTitle = song.songTitle?.length > 15 ? song.songTitle.substring(0, 24) : song.songTitle;
+          songTitle = cleanTitle(songTitle);
           return {
             ...playlistSong.dataValues,
             songUrl: song.songUrl,
@@ -314,11 +342,32 @@ exports.updateSongPlayedCount = async (req, res) => {
       // 9. Filter mostPlayed
       let mostPlayed = songData.filter(item => item.playlistName === 'MostPlayed');
 
+      // 10. Get recommended songs (example: songs not in user's playlists, not deleted)
+      // Get recommended songs: songs not in user's playlists, not deleted, random order
+      const recommendedSongs = await db.song.findAll({
+        where: {
+          songId: allSongIds,
+          isDeleted: false
+        },
+        attributes: ['songId', 'songUrl', 'songCardUrl', 'albumCardUrl', 'songTitle', 'artistName', 'youtubeId'],
+        order: db.sequelize.random(), // random order
+        limit: 10 // You can change limit as needed
+      });
+
+      // Clean songTitle for recommended songs
+      const cleanedRecommended = recommendedSongs.map(song => {
+        if (song.songTitle) {
+          song.songTitle = cleanTitle(song.songTitle);
+        }
+        return song;
+      });
+
       return res.status(200).send({
         code: 200,
         message: "Playlist and song data fetched successfully",
         data: songData,
-        mostPlayed
+        mostPlayed,
+        recommended: cleanedRecommended
       });
     } catch (error) {
       console.error("Error:", error.message);
@@ -379,19 +428,22 @@ exports.updateSongPlayedCount = async (req, res) => {
           'songCardUrl'
         ]
       });
+
+      // Clean songTitle for each song
+      const cleanedSongs = songs.map(song => {
+        if (song.songTitle) {
+          song.songTitle = cleanTitle(song.songTitle);
+        }
+        return song;
+      });
   
       return res.status(200).send({ 
         code: 200, 
         message: "Liked songs listed successfully", 
-        data: songs 
+        data: cleanedSongs 
       });
     } catch (error) {
       console.error('Error:', error.message);
       return res.status(500).json({ code: 500, message: 'Server error' });
     }
   };
-  
-
-
-
-
